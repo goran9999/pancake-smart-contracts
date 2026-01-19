@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity =0.6.6;
 
-import '@uniswap/lib/contracts/libraries/TransferHelper.sol';
+import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 
 import "./interfaces/IPancakeRouter02.sol";
 import "./interfaces/IPancakeFactory.sol";
@@ -17,7 +17,7 @@ contract PancakeRouter is IPancakeRouter02 {
     address public immutable override WETH;
 
     modifier ensure(uint256 deadline) {
-        require(deadline >= block.timestamp, "PancakeRouter: EXPIRED");
+        require(deadline >= block.timestamp, "ZygoRouter: EXPIRED");
         _;
     }
 
@@ -49,12 +49,12 @@ contract PancakeRouter is IPancakeRouter02 {
         } else {
             uint256 amountBOptimal = PancakeLibrary.quote(amountADesired, reserveA, reserveB);
             if (amountBOptimal <= amountBDesired) {
-                require(amountBOptimal >= amountBMin, "PancakeRouter: INSUFFICIENT_B_AMOUNT");
+                require(amountBOptimal >= amountBMin, "ZygoRouter: INSUFFICIENT_B_AMOUNT");
                 (amountA, amountB) = (amountADesired, amountBOptimal);
             } else {
                 uint256 amountAOptimal = PancakeLibrary.quote(amountBDesired, reserveB, reserveA);
                 assert(amountAOptimal <= amountADesired);
-                require(amountAOptimal >= amountAMin, "PancakeRouter: INSUFFICIENT_A_AMOUNT");
+                require(amountAOptimal >= amountAMin, "ZygoRouter: INSUFFICIENT_A_AMOUNT");
                 (amountA, amountB) = (amountAOptimal, amountBDesired);
             }
         }
@@ -69,17 +69,7 @@ contract PancakeRouter is IPancakeRouter02 {
         uint256 amountBMin,
         address to,
         uint256 deadline
-    )
-        external
-        virtual
-        override
-        ensure(deadline)
-        returns (
-            uint256 amountA,
-            uint256 amountB,
-            uint256 liquidity
-        )
-    {
+    ) external virtual override ensure(deadline) returns (uint256 amountA, uint256 amountB, uint256 liquidity) {
         (amountA, amountB) = _addLiquidity(tokenA, tokenB, amountADesired, amountBDesired, amountAMin, amountBMin);
         address pair = PancakeLibrary.pairFor(factory, tokenA, tokenB);
         TransferHelper.safeTransferFrom(tokenA, msg.sender, pair, amountA);
@@ -100,11 +90,7 @@ contract PancakeRouter is IPancakeRouter02 {
         virtual
         override
         ensure(deadline)
-        returns (
-            uint256 amountToken,
-            uint256 amountETH,
-            uint256 liquidity
-        )
+        returns (uint256 amountToken, uint256 amountETH, uint256 liquidity)
     {
         (amountToken, amountETH) = _addLiquidity(
             token,
@@ -138,8 +124,8 @@ contract PancakeRouter is IPancakeRouter02 {
         (uint256 amount0, uint256 amount1) = IPancakePair(pair).burn(to);
         (address token0, ) = PancakeLibrary.sortTokens(tokenA, tokenB);
         (amountA, amountB) = tokenA == token0 ? (amount0, amount1) : (amount1, amount0);
-        require(amountA >= amountAMin, "PancakeRouter: INSUFFICIENT_A_AMOUNT");
-        require(amountB >= amountBMin, "PancakeRouter: INSUFFICIENT_B_AMOUNT");
+        require(amountA >= amountAMin, "ZygoRouter: INSUFFICIENT_A_AMOUNT");
+        require(amountB >= amountBMin, "ZygoRouter: INSUFFICIENT_B_AMOUNT");
     }
 
     function removeLiquidityETH(
@@ -243,17 +229,14 @@ contract PancakeRouter is IPancakeRouter02 {
 
     // **** SWAP ****
     // requires the initial amount to have already been sent to the first pair
-    function _swap(
-        uint256[] memory amounts,
-        address[] memory path,
-        address _to
-    ) internal virtual {
+    function _swap(uint256[] memory amounts, address[] memory path, address _to) internal virtual {
         for (uint256 i; i < path.length - 1; i++) {
             (address input, address output) = (path[i], path[i + 1]);
             (address token0, ) = PancakeLibrary.sortTokens(input, output);
             uint256 amountOut = amounts[i + 1];
-            (uint256 amount0Out, uint256 amount1Out) =
-                input == token0 ? (uint256(0), amountOut) : (amountOut, uint256(0));
+            (uint256 amount0Out, uint256 amount1Out) = input == token0
+                ? (uint256(0), amountOut)
+                : (amountOut, uint256(0));
             address to = i < path.length - 2 ? PancakeLibrary.pairFor(factory, output, path[i + 2]) : _to;
             IPancakePair(PancakeLibrary.pairFor(factory, input, output)).swap(amount0Out, amount1Out, to, new bytes(0));
         }
@@ -267,7 +250,7 @@ contract PancakeRouter is IPancakeRouter02 {
         uint256 deadline
     ) external virtual override ensure(deadline) returns (uint256[] memory amounts) {
         amounts = PancakeLibrary.getAmountsOut(factory, amountIn, path);
-        require(amounts[amounts.length - 1] >= amountOutMin, "PancakeRouter: INSUFFICIENT_OUTPUT_AMOUNT");
+        require(amounts[amounts.length - 1] >= amountOutMin, "ZygoRouter: INSUFFICIENT_OUTPUT_AMOUNT");
         TransferHelper.safeTransferFrom(
             path[0],
             msg.sender,
@@ -285,7 +268,7 @@ contract PancakeRouter is IPancakeRouter02 {
         uint256 deadline
     ) external virtual override ensure(deadline) returns (uint256[] memory amounts) {
         amounts = PancakeLibrary.getAmountsIn(factory, amountOut, path);
-        require(amounts[0] <= amountInMax, "PancakeRouter: EXCESSIVE_INPUT_AMOUNT");
+        require(amounts[0] <= amountInMax, "ZygoRouter: EXCESSIVE_INPUT_AMOUNT");
         TransferHelper.safeTransferFrom(
             path[0],
             msg.sender,
@@ -301,9 +284,9 @@ contract PancakeRouter is IPancakeRouter02 {
         address to,
         uint256 deadline
     ) external payable virtual override ensure(deadline) returns (uint256[] memory amounts) {
-        require(path[0] == WETH, "PancakeRouter: INVALID_PATH");
+        require(path[0] == WETH, "ZygoRouter: INVALID_PATH");
         amounts = PancakeLibrary.getAmountsOut(factory, msg.value, path);
-        require(amounts[amounts.length - 1] >= amountOutMin, "PancakeRouter: INSUFFICIENT_OUTPUT_AMOUNT");
+        require(amounts[amounts.length - 1] >= amountOutMin, "ZygoRouter: INSUFFICIENT_OUTPUT_AMOUNT");
         IWETH(WETH).deposit{value: amounts[0]}();
         assert(IWETH(WETH).transfer(PancakeLibrary.pairFor(factory, path[0], path[1]), amounts[0]));
         _swap(amounts, path, to);
@@ -316,9 +299,9 @@ contract PancakeRouter is IPancakeRouter02 {
         address to,
         uint256 deadline
     ) external virtual override ensure(deadline) returns (uint256[] memory amounts) {
-        require(path[path.length - 1] == WETH, "PancakeRouter: INVALID_PATH");
+        require(path[path.length - 1] == WETH, "ZygoRouter: INVALID_PATH");
         amounts = PancakeLibrary.getAmountsIn(factory, amountOut, path);
-        require(amounts[0] <= amountInMax, "PancakeRouter: EXCESSIVE_INPUT_AMOUNT");
+        require(amounts[0] <= amountInMax, "ZygoRouter: EXCESSIVE_INPUT_AMOUNT");
         TransferHelper.safeTransferFrom(
             path[0],
             msg.sender,
@@ -337,9 +320,9 @@ contract PancakeRouter is IPancakeRouter02 {
         address to,
         uint256 deadline
     ) external virtual override ensure(deadline) returns (uint256[] memory amounts) {
-        require(path[path.length - 1] == WETH, "PancakeRouter: INVALID_PATH");
+        require(path[path.length - 1] == WETH, "ZygoRouter: INVALID_PATH");
         amounts = PancakeLibrary.getAmountsOut(factory, amountIn, path);
-        require(amounts[amounts.length - 1] >= amountOutMin, "PancakeRouter: INSUFFICIENT_OUTPUT_AMOUNT");
+        require(amounts[amounts.length - 1] >= amountOutMin, "ZygoRouter: INSUFFICIENT_OUTPUT_AMOUNT");
         TransferHelper.safeTransferFrom(
             path[0],
             msg.sender,
@@ -357,9 +340,9 @@ contract PancakeRouter is IPancakeRouter02 {
         address to,
         uint256 deadline
     ) external payable virtual override ensure(deadline) returns (uint256[] memory amounts) {
-        require(path[0] == WETH, "PancakeRouter: INVALID_PATH");
+        require(path[0] == WETH, "ZygoRouter: INVALID_PATH");
         amounts = PancakeLibrary.getAmountsIn(factory, amountOut, path);
-        require(amounts[0] <= msg.value, "PancakeRouter: EXCESSIVE_INPUT_AMOUNT");
+        require(amounts[0] <= msg.value, "ZygoRouter: EXCESSIVE_INPUT_AMOUNT");
         IWETH(WETH).deposit{value: amounts[0]}();
         assert(IWETH(WETH).transfer(PancakeLibrary.pairFor(factory, path[0], path[1]), amounts[0]));
         _swap(amounts, path, to);
@@ -379,13 +362,15 @@ contract PancakeRouter is IPancakeRouter02 {
             {
                 // scope to avoid stack too deep errors
                 (uint256 reserve0, uint256 reserve1, ) = pair.getReserves();
-                (uint256 reserveInput, uint256 reserveOutput) =
-                    input == token0 ? (reserve0, reserve1) : (reserve1, reserve0);
+                (uint256 reserveInput, uint256 reserveOutput) = input == token0
+                    ? (reserve0, reserve1)
+                    : (reserve1, reserve0);
                 amountInput = IERC20(input).balanceOf(address(pair)).sub(reserveInput);
                 amountOutput = PancakeLibrary.getAmountOut(amountInput, reserveInput, reserveOutput);
             }
-            (uint256 amount0Out, uint256 amount1Out) =
-                input == token0 ? (uint256(0), amountOutput) : (amountOutput, uint256(0));
+            (uint256 amount0Out, uint256 amount1Out) = input == token0
+                ? (uint256(0), amountOutput)
+                : (amountOutput, uint256(0));
             address to = i < path.length - 2 ? PancakeLibrary.pairFor(factory, output, path[i + 2]) : _to;
             pair.swap(amount0Out, amount1Out, to, new bytes(0));
         }
@@ -408,7 +393,7 @@ contract PancakeRouter is IPancakeRouter02 {
         _swapSupportingFeeOnTransferTokens(path, to);
         require(
             IERC20(path[path.length - 1]).balanceOf(to).sub(balanceBefore) >= amountOutMin,
-            "PancakeRouter: INSUFFICIENT_OUTPUT_AMOUNT"
+            "ZygoRouter: INSUFFICIENT_OUTPUT_AMOUNT"
         );
     }
 
@@ -418,7 +403,7 @@ contract PancakeRouter is IPancakeRouter02 {
         address to,
         uint256 deadline
     ) external payable virtual override ensure(deadline) {
-        require(path[0] == WETH, "PancakeRouter: INVALID_PATH");
+        require(path[0] == WETH, "ZygoRouter: INVALID_PATH");
         uint256 amountIn = msg.value;
         IWETH(WETH).deposit{value: amountIn}();
         assert(IWETH(WETH).transfer(PancakeLibrary.pairFor(factory, path[0], path[1]), amountIn));
@@ -426,7 +411,7 @@ contract PancakeRouter is IPancakeRouter02 {
         _swapSupportingFeeOnTransferTokens(path, to);
         require(
             IERC20(path[path.length - 1]).balanceOf(to).sub(balanceBefore) >= amountOutMin,
-            "PancakeRouter: INSUFFICIENT_OUTPUT_AMOUNT"
+            "ZygoRouter: INSUFFICIENT_OUTPUT_AMOUNT"
         );
     }
 
@@ -446,7 +431,7 @@ contract PancakeRouter is IPancakeRouter02 {
         );
         _swapSupportingFeeOnTransferTokens(path, address(this));
         uint256 amountOut = IERC20(WETH).balanceOf(address(this));
-        require(amountOut >= amountOutMin, "PancakeRouter: INSUFFICIENT_OUTPUT_AMOUNT");
+        require(amountOut >= amountOutMin, "ZygoRouter: INSUFFICIENT_OUTPUT_AMOUNT");
         IWETH(WETH).withdraw(amountOut);
         TransferHelper.safeTransferETH(to, amountOut);
     }
@@ -476,23 +461,17 @@ contract PancakeRouter is IPancakeRouter02 {
         return PancakeLibrary.getAmountIn(amountOut, reserveIn, reserveOut);
     }
 
-    function getAmountsOut(uint256 amountIn, address[] memory path)
-        public
-        view
-        virtual
-        override
-        returns (uint256[] memory amounts)
-    {
+    function getAmountsOut(
+        uint256 amountIn,
+        address[] memory path
+    ) public view virtual override returns (uint256[] memory amounts) {
         return PancakeLibrary.getAmountsOut(factory, amountIn, path);
     }
 
-    function getAmountsIn(uint256 amountOut, address[] memory path)
-        public
-        view
-        virtual
-        override
-        returns (uint256[] memory amounts)
-    {
+    function getAmountsIn(
+        uint256 amountOut,
+        address[] memory path
+    ) public view virtual override returns (uint256[] memory amounts) {
         return PancakeLibrary.getAmountsIn(factory, amountOut, path);
     }
 }
