@@ -23,6 +23,9 @@ const config: HardhatUserConfig = {
   defaultNetwork: "hardhat",
   networks: {
     hardhat: {},
+    hardhatLocal:{
+      url:"http://localhost:8545"
+    }
     // testnet: bscTestnet,
     // mainnet: bscMainnet,
   },
